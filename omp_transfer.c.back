@@ -1,0 +1,37 @@
+#include "omp_transfer.h"
+
+void transfer_omp_loop(uintptr_t rbuf, uintptr_t sbuf, size_t size, HMPI_Request recv_req, HMPI_Request send_req){
+
+//set number of threads dynamically
+//load balance ploicy - depends on number of ranks
+// OR speculative execution (running time/MPI time
+
+    omp_set_dynamic(0);     // Explicitly disable dynamic teams
+    omp_set_num_threads(core_allocation_rank); // Use 4 threads for all consecutive parallel regions
+
+//transfer by characters
+#pragma omp parallel
+    {
+#if HMPI_OMP_AFFINITY_AWARE == 1
+        // Work with teh set structure
+        cpu_set_t set;
+        CPU_ZERO(&set);
+        //bind allocated cores to threads
+        int k = 0 ;
+        for(k = core_allocation_start ; k < core_allocation_end ; k++)
+            CPU_SET(k, &set);
+
+        //actual binding/affinity setting take place here
+        pid_t tid = (pid_t) syscall(SYS_gettid);
+        sched_setaffinity(tid, sizeof(set), &set);
+
+#endif
+
+        int i = 0;
+#pragma omp for private(i)
+        for (i = 0; i < size; i++) {
+            ((char *) rbuf)[i] = ((char *) sbuf)[i];
+        }
+    }
+
+}

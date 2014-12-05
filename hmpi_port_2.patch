@@ -1,0 +1,92 @@
+Index: sm_malloc.c
+===================================================================
+--- sm_malloc.c	(revision 810)
++++ sm_malloc.c	(working copy)
+@@ -143,15 +143,16 @@
+ #else
+ 
+ //Total shared memory space to mmap.
+-#define DEFAULT_TOTAL_SIZE ((1024L*1024L*1024L * 512))
++//#define DEFAULT_TOTAL_SIZE ((1024L*1024L*1024L * 8))
++#define DEFAULT_TOTAL_SIZE ((1024L*1024L*64))
+ 
+ //How many pieces the available SM memory should be divided into.
+ // Each rank/process will get one piece.
+-#define DEFAULT_RANK_DIVIDER (16)
++#define DEFAULT_RANK_DIVIDER (2)
+ 
+ #endif
+ 
+-static char* sm_filename = "hmpismfile";
++static char* sm_filename = "/hmpismfile.mic";
+ 
+ 
+ static void __sm_destroy(void)
+Index: Makefile
+===================================================================
+--- Makefile	(revision 810)
++++ Makefile	(working copy)
+@@ -29,7 +29,7 @@
+ CC=mpicc -std=gnu99 
+ 
+ WARN=-Wall -Wuninitialized -Winline #-Wno-unused-function
+-CFLAGS+=$(WARN) -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
++CFLAGS+=$(WARN) -xhost -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+ #CFLAGS=$(WARN) -O3 -mcpu=power7 -fomit-frame-pointer
+ #CFLAGS=$(WARN) $(INCLUDE) -O3 -march=native -fomit-frame-pointer
+ #CFLAGS=$(WARN) -O0 -g
+@@ -52,10 +52,10 @@
+ HDRS=hmpi.h barrier.h lock.h profile2.h
+ 
+ 
+-all: INCS+=-DUSE_NUMA=1 -DUSE_MCS=1
++all: INCS+=-DUSE_NUMA=0 -DUSE_MCS=1
+ all: SRCS+=sm_malloc.c
+ all: $(SRCS:%.c=%.o) sm_malloc.o
+-	ar sr libhmpi.a $(SRCS:%.c=%.o)
++	xiar crs libhmpi.a $(SRCS:%.c=%.o)
+ 	rm $(SRCS:%.c=%.o)
+ 
+ #bgq: CFLAGS=-O3 -qhot=novector -qsimd=auto $(INCLUDE) -qinline=auto:level=5 -qassert=refalign -qlibansi -qlibmpi -qipa -qhot  -qprefetch=aggressive
+@@ -88,7 +88,7 @@
+ debug: CFLAGS = $(WARN) -g -O0 -rdynamic $(INCLUDE)
+ debug: SRCS+=sm_malloc.c
+ debug: $(SRCS:%.c=%.o)  sm_malloc.o
+-	ar sr libhmpi.a $(SRCS:%.c=%.o)
++	xiar crs libhmpi.a $(SRCS:%.c=%.o)
+ 	rm $(SRCS:%.c=%.o)
+ 
+ opi: all example_opi.c
+@@ -102,4 +102,3 @@
+ 
+ bgq_clean:
+ 	rm -f *.o libhmpi-bgq.a
+-
+Index: hmpi.c
+===================================================================
+--- hmpi.c	(revision 810)
++++ hmpi.c	(working copy)
+@@ -80,7 +80,6 @@
+ #endif
+ 
+ #ifdef USE_NUMA
+-#include <numa.h>
+ #endif
+ 
+ 
+Index: lock.h
+===================================================================
+--- lock.h	(revision 810)
++++ lock.h	(working copy)
+@@ -334,7 +334,10 @@
+ #endif
+ 
+ 
+-#ifdef __x86_64__ //Better x86 versions
++#ifdef __MIC__ && __x86_64__ //Better x86 versions
++#define STORE_FENCE() __asm__ volatile ("":::"memory")
++#define LOAD_FENCE() __asm__ volatile ("":::"memory")
++#elif defined(__x86_64__) //Better x86 versions
+ #define STORE_FENCE() __asm__ volatile ("sfence")
+ #define LOAD_FENCE() __asm__ volatile ("lfence")
+ #else //Default GCC builtins

@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 27
+/svn/!svn/ver/810/hmpi/test
+END
+test_comm_dup.c
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/759/hmpi/test/test_comm_dup.c
+END
+Makefile.bgq
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/807/hmpi/test/Makefile.bgq
+END
+test_comm_split.c
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/810/hmpi/test/test_comm_split.c
+END
+test_get_count.c
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/!svn/ver/807/hmpi/test/test_get_count.c
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/!svn/ver/810/hmpi/test/Makefile
+END

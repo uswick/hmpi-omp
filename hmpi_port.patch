@@ -1,0 +1,64 @@
+Index: sm_malloc.c
+===================================================================
+--- sm_malloc.c	(revision 810)
++++ sm_malloc.c	(working copy)
+@@ -143,7 +143,7 @@
+ #else
+ 
+ //Total shared memory space to mmap.
+-#define DEFAULT_TOTAL_SIZE ((1024L*1024L*1024L * 512))
++#define DEFAULT_TOTAL_SIZE ((1024L*1024L*1024L * 32))
+ 
+ //How many pieces the available SM memory should be divided into.
+ // Each rank/process will get one piece.
+@@ -151,7 +151,7 @@
+ 
+ #endif
+ 
+-static char* sm_filename = "hmpismfile";
++static char* sm_filename = "/hmpismfile";
+ 
+ 
+ static void __sm_destroy(void)
+Index: Makefile
+===================================================================
+--- Makefile	(revision 810)
++++ Makefile	(working copy)
+@@ -52,7 +52,7 @@
+ HDRS=hmpi.h barrier.h lock.h profile2.h
+ 
+ 
+-all: INCS+=-DUSE_NUMA=1 -DUSE_MCS=1
++all: INCS+=-DUSE_NUMA=0 -DUSE_MCS=1
+ all: SRCS+=sm_malloc.c
+ all: $(SRCS:%.c=%.o) sm_malloc.o
+ 	ar sr libhmpi.a $(SRCS:%.c=%.o)
+Index: hmpi.c
+===================================================================
+--- hmpi.c	(revision 810)
++++ hmpi.c	(working copy)
+@@ -80,7 +80,6 @@
+ #endif
+ 
+ #ifdef USE_NUMA
+-#include <numa.h>
+ #endif
+ 
+ 
+Index: lock.h
+===================================================================
+--- lock.h	(revision 810)
++++ lock.h	(working copy)
+@@ -334,7 +334,10 @@
+ #endif
+ 
+ 
+-#ifdef __x86_64__ //Better x86 versions
++#ifdef __MIC__ && __x86_64__ //Better x86 versions
++#define STORE_FENCE() __asm__ volatile ("":::"memory")
++#define LOAD_FENCE() __asm__ volatile ("":::"memory")
++#elif defined(__x86_64__) //Better x86 versions
+ #define STORE_FENCE() __asm__ volatile ("sfence")
+ #define LOAD_FENCE() __asm__ volatile ("lfence")
+ #else //Default GCC builtins
+

@@ -1,0 +1,122 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="malloc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nbc_op.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="hmpi_opi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="hmpi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mpiprof.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sm_malloc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="hmpi_coll.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="hmpi_p2p.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="test\test_get_count.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="test\test_comm_split.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="test\test_comm_dup.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="old\hmpi_psm.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="old\example_opi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="old\scatter_mpi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="old\example_mpi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="old\libpsm.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="old\scatter_opi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="old\opi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="old\hmpi_coll.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="error.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="profile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="profile-useq.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="mypapi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="hmpi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="barrier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="old\libpsm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="old\hmpi_psm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="old\opi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="old\barrier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Makefile">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="Makefile.mic">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,533 @@
+Index: hmpi.h
+===================================================================
+--- hmpi.h	(revision 810)
++++ hmpi.h	(working copy)
+@@ -369,6 +369,7 @@
+ static int HMPI_Comm_group(HMPI_Comm comm, HMPI_Group* group)
+ {
+     *group = NULL;
++    printf("stub Comm_ group \n"); 
+     return MPI_SUCCESS;    
+ }
+ 
+@@ -473,6 +474,9 @@
+ #define MPI_Comm_free HMPI_Comm_free
+ #define MPI_Comm_split HMPI_Comm_split
+ 
++#define MPI_Comm_group(c, group) \
++    MPI_Comm_group((c)->comm, group)
++
+ #define MPI_Cart_coords(comm, rank, maxdims, coords) \
+     MPI_Cart_coords((comm)->comm, rank, maxdims, coords)
+ 
+@@ -539,7 +543,7 @@
+ 
+ //TODO NOT IMPLEMENTED YET
+ // Added to catch apps that call these routines.
+-#define MPI_Comm_group HMPI_Comm_group
++//#define MPI_Comm_group HMPI_Comm_group
+ 
+ #endif //HMPI_INTERNAL
+ 
+Index: Makefile.mic
+===================================================================
+--- Makefile.mic	(revision 0)
++++ Makefile.mic	(revision 0)
+@@ -0,0 +1,105 @@
++#Copyright (c) 2010-2013 The Trustees of Indiana University.
++#All rights reserved.
++#
++#Redistribution and use in source and binary forms, with or without
++#modification, are permitted provided that the following conditions are met:
++#
++#- Redistributions of source code must retain the above copyright notice, this
++#  list of conditions and the following disclaimer.
++#
++#- Redistributions in binary form must reproduce the above copyright notice,
++#  this list of conditions and the following disclaimer in the documentation
++#  and/or other materials provided with the distribution.
++#
++#- Neither the Indiana University nor the names of its contributors may be used
++#  to endorse or promote products derived from this software without specific
++#  prior written permission.
++#
++#THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
++#ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++#WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++#DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
++#ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++#(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++#LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
++#ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++#(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++#SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++CC=mpicc -std=gnu99 
++
++WARN=-Wall -Wuninitialized -Winline #-Wno-unused-function
++CFLAGS+=$(WARN) -mmic -g -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
++#CFLAGS=$(WARN) -O3 -mcpu=power7 -fomit-frame-pointer
++#CFLAGS=$(WARN) $(INCLUDE) -O3 -march=native -fomit-frame-pointer
++#CFLAGS=$(WARN) -O0 -g
++
++LIBS=-lrt -lnuma
++
++INCS=
++INCS+=-DENABLE_OPI=1
++#INCS+=-DHMPI_LOGCALLS=1 
++#INCS+=-DHMPI_CHECKSUM=1
++#INCS+=-D_PROFILE=1
++#INCS+=-DFULL_PROFILE
++#INCS+= -DHMPI_STATS
++#INCS+=-D_PROFILE_PAPI_EVENTS=1
++
++SRCS=hmpi_p2p.c hmpi.c #hmpi_coll.c nbc_op.c #hmpi_opi.c
++SRCS+=hmpi_opi.c
++ASSRCS=hmpi_p2p.s hmpi.s #hmpi_coll.c nbc_op.c #hmpi_opi.c
++MAIN=main.c
++HDRS=hmpi.h barrier.h lock.h profile2.h
++
++
++all: INCS+=-DUSE_NUMA=0 -DUSE_MCS=1
++all: SRCS+=sm_malloc.c
++all: $(SRCS:%.c=%.o) sm_malloc.o
++	xiar crs libhmpiMIC.a $(SRCS:%.c=%.o)
++	rm $(SRCS:%.c=%.o)
++
++#bgq: CFLAGS=-O3 -qhot=novector -qsimd=auto $(INCLUDE) -qinline=auto:level=5 -qassert=refalign -qlibansi -qlibmpi -qipa -qhot  -qprefetch=aggressive
++bgq: CC=mpixlc
++bgq: SRCS+=sm_malloc.c
++bgq: CFLAGS=-O3 -qcompact -qhot=novector -qsimd=auto -qlibansi -qlibmpi $(INCLUDE)
++bgq: $(SRCS:%.c=%.o) sm_malloc.o
++	ar sr libhmpi-bgq.a $(SRCS:%.c=%.o)
++	rm $(SRCS:%.c=%.o)
++
++bgq_debug: LIBS =
++bgq_debug: CC=mpixlc
++bgq_debug: CFLAGS=-O0 -g -qhot=novector -qsimd=auto $(INCLUDE)
++bgq_debug: SRCS+=sm_malloc.c
++bgq_debug: $(SRCS:%.c=%.o) sm_malloc.o
++	ar sr libhmpi-bgq.a $(SRCS:%.c=%.o)
++	rm $(SRCS:%.c=%.o)
++
++#main: CFLAGS = -g -O -D_PROFILE=1 -D_PROFILE_HMPI=1
++#main: CFLAGS+=-D_PROFILE=1 -D_PROFILE_HMPI=1
++#main: CFLAGS=-O5 -qhot=novector -qsimd=auto -D_PROFILE=1 -D_PROFILE_HMPI=1
++main: all $(MAIN:%.c=%.o)
++	$(CC) $(CFLAGS) $(LDFLAGS) -Wl,--allow-multiple-definition -o main main.o libhmpiMIC.a $(LIBS)
++
++bgq_main: CC=mpixlc
++bgq_main: CFLAGS=-O2 -g $(INCLUDE)
++bgq_main: bgq $(MAIN:%.c=%.o)
++	$(CC) $(CFLAGS) $(LDFLAGS) -Wl,--allow-multiple-definition -o main main.o libhmpi.a $(LIBS)
++
++debug: CFLAGS = $(WARN) -g -O0 -rdynamic $(INCLUDE)
++debug: SRCS+=sm_malloc.c
++debug: $(SRCS:%.c=%.o)  sm_malloc.o
++	xiar crs libhmpiMIC.a $(SRCS:%.c=%.o)
++	rm $(SRCS:%.c=%.o)
++
++opi: all example_opi.c
++	$(CC) $(CCFLAGS) $(LDFLAGS) -o example_opi example_opi.o libhmpi.a  $(LIBS)
++
++.c.o: $(HDRS)
++	$(CC) $(INCS) $(CFLAGS) $(CPPFLAGS) -c $<
++
++clean:
++	rm -f *.o libhmpiMIC.a
++
++bgq_clean:
++	rm -f *.o libhmpi-bgq.a
++
+Index: sm_malloc.c
+===================================================================
+--- sm_malloc.c	(revision 810)
++++ sm_malloc.c	(working copy)
+@@ -143,15 +143,20 @@
+ #else
+ 
+ //Total shared memory space to mmap.
+-#define DEFAULT_TOTAL_SIZE ((1024L*1024L*1024L * 512))
++//#define DEFAULT_TOTAL_SIZE ((1024L*1024L*1024L * 8))
++//#define DEFAULT_TOTAL_SIZE ((1024L*1024L*64))
++//#define DEFAULT_TOTAL_SIZE ((1024L*1024L*1024L*6))
++#define DEFAULT_TOTAL_SIZE ((1024L*1024L*1024L*24))
+ 
+ //How many pieces the available SM memory should be divided into.
+ // Each rank/process will get one piece.
+-#define DEFAULT_RANK_DIVIDER (16)
++#define DEFAULT_RANK_DIVIDER (20)
++//#define DEFAULT_RANK_DIVIDER (16)
+ 
+ #endif
+ 
+-static char* sm_filename = "hmpismfile";
++//static char* sm_filename = "/hmpismfile.mic";
++static char* sm_filename = "/hmpismfile.cpu";
+ 
+ 
+ static void __sm_destroy(void)
+@@ -309,6 +314,11 @@
+     //SM_RANKS and DEFAULT_RANK_DIVIDER indicate how many regions to break the
+     //SM region into -- one region per rank/process.
+     tmp = getenv("SM_RANKS");
++    //if (tmp == NULL){
++#ifdef __MIC__
++	tmp = getenv("MIC_PPN");
++#endif 
++    //}
+     if(tmp == NULL) {
+         rank_divider = DEFAULT_RANK_DIVIDER;
+     } else {
+@@ -368,6 +378,7 @@
+     //Create my own mspace.
+     size_t local_size = total_size / rank_divider;
+ 
++    printf("params:  %ld %ld\n", total_size, rank_divider);
+     //void* base = sm_morecore(local_size);
+     void* base = (void*)__sync_fetch_and_add(&sm_region->brk, local_size);
+     if(base < sm_lower || base >= sm_upper) {
+Index: hmpi_p2p.c
+===================================================================
+--- hmpi_p2p.c	(revision 810)
++++ hmpi_p2p.c	(working copy)
+@@ -1754,8 +1754,11 @@
+     //MPI will then handle PROC_NULL, so we don't need to check for it.
+     int dest_node_rank;
+     HMPI_Comm_node_rank(comm, dest, &dest_node_rank);
++    //double diff_hmpi,start_hmpi ,start_mpi , diff_mpi, start_progress, start_progress2 ;
++    //start_mpi = MPI_Wtime();
+ 
+     if(dest_node_rank != MPI_UNDEFINED) {
++	//printf("HSEND() reached local hmpi_send() path target : %d tag : %d count : %d \n", dest, tag, count);
+         HMPI_Request req = acquire_req();
+ 
+         HMPI_Local_isend(buf, count, datatype, dest_node_rank, tag, comm, req);
+@@ -1766,13 +1769,14 @@
+ 
+         do {
+             HMPI_Progress(recv_reqs_head, local_list, shared_list);
++			//printf("hmpi_progress()... \n");
+         } while(HMPI_Progress_send(req) != HMPI_REQ_COMPLETE);
+ 
+         release_req(req);
+     } else {
+         MPI_Request req;
+         int flag = 0;
+-
++        //printf("NSEND() reached MPI_send() path target : %d tag : %d count : %d \n", dest, tag, count);
+         //Can't use MPI_Send here :(
+         //Deadlocks are possible if local progress isn't made.
+         MPI_Isend(buf, count, datatype, dest, tag, comm->comm, &req);
+@@ -1781,10 +1785,22 @@
+         HMPI_Request_list* local_list = &g_tl_send_reqs;
+         HMPI_Request_list* shared_list = g_tl_my_send_reqs;
+ 
++        //start_hmpi = MPI_Wtime() ;
++        //diff_mpi =  start_hmpi - start_mpi ;
++        //diff_hmpi = 0 ;
+         do {
++            //start_progress = MPI_Wtime() ;
+             HMPI_Progress(recv_reqs_head, local_list, shared_list);
++            //start_progress2 = MPI_Wtime() ;
++            //diff_hmpi += start_progress2 - start_progress ;
+             MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
++            //diff_mpi += MPI_Wtime() -  start_progress2 ;
+         } while(flag == 0);
++        //printf("SEND dest rank: %d  hmpi: %f  mpi: %f\n", dest, diff_hmpi/1000000 ,diff_mpi/1000000); 
++       // do {
++       //     HMPI_Progress(recv_reqs_head, local_list, shared_list);
++       //     MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
++       // } while(flag == 0);
+ 
+ #ifdef HMPI_STATS
+         int type_size;
+@@ -1926,10 +1942,12 @@
+     //MPI will then handle PROC_NULL, so we don't need to check for it.
+     int src_node_rank;
+     HMPI_Comm_node_rank(comm, source, &src_node_rank);
+-
++    //Todo - test measurement times - remove later
++    //double diff_hmpi,start_hmpi ,start_mpi , diff_mpi, start_progress, start_progress2 ;
++    //start_mpi = MPI_Wtime(); 
+     if(src_node_rank != MPI_UNDEFINED) {
+         HMPI_Request req = acquire_req();
+-
++	//printf("HRECV() reached local hmpi_recv() path source : %d tag : %d\n", source, tag);
+         //Yes, Local_irecv uses source, not src_node_rank.
+         HMPI_Local_irecv(buf, count, datatype, source, tag, comm, req);
+         //HMPI_Wait(&req, status);
+@@ -1940,6 +1958,7 @@
+ 
+         do {
+             HMPI_Progress(recv_reqs_head, local_list, shared_list);
++			//printf("hmpi_progress()... \n");
+         } while(get_reqstat(req) != HMPI_REQ_COMPLETE);
+ 
+         if(status != HMPI_STATUS_IGNORE) {
+@@ -1954,18 +1973,33 @@
+     } else {
+         MPI_Request req;
+         int flag = 0;
+-
++	//printf("NRECV() reached MPI_recv() path source : %d tag : %d\n", source, tag);
+         MPI_Irecv(buf, count, datatype, source, tag, comm->comm, &req);
+ 
+         HMPI_Item* recv_reqs_head = &g_recv_reqs_head;
+         HMPI_Request_list* local_list = &g_tl_send_reqs;
+         HMPI_Request_list* shared_list = g_tl_my_send_reqs;
++        
++        MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
++        //start_hmpi = MPI_Wtime() ;
++        //diff_mpi =  start_hmpi - start_mpi ;
++        //diff_hmpi = 0 ;
+ 
+-        MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
+         while(flag == 0) {
++            //start_progress = MPI_Wtime() ;
+             HMPI_Progress(recv_reqs_head, local_list, shared_list);
++            //start_progress2 = MPI_Wtime() ;
++            //diff_hmpi += start_progress2 - start_progress ;
+             MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
++            //diff_mpi += MPI_Wtime() -  start_progress2 ;
+         }
++        //printf("RECV source rank: %d  hmpi: %f  mpi: %f\n",source, diff_hmpi/1000000 ,diff_mpi/1000000);
++
++        //MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
++        //while(flag == 0) {
++        //    HMPI_Progress(recv_reqs_head, local_list, shared_list);
++        //    MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
++        //}
+     }
+ 
+ #ifdef HMPI_STATS
+@@ -2042,15 +2076,18 @@
+                 HMPI_Comm comm, HMPI_Status *status)
+ {
+     HMPI_Request req;
+-
++    //printf("HMPI_SENDRECV()  source: %d \n",source);
+     //Irecv/Send/Wait is chosen intentionally: this creates the possibility
+     // for sender-side acceleration in the synergistic protocol.  Doing
+     // Isend/Recv/Wait would be less likely to do so since it'll only poll
+     // the recv until that completes, then the send.  Irecv/Send polls both.
+     HMPI_Irecv(recvbuf, recvcount, recvtype, source, recvtag, comm, &req);
++    //printf("HMPI_SENDRECV()  after Irecv() \n");
+     HMPI_Send(sendbuf, sendcount, sendtype, dest, sendtag, comm);
++    //printf("HMPI_SENDRECV()  after Send() \n");
+ 
+     HMPI_Wait(&req, status);
++    //printf("HMPI_SENDRECV()  exit() \n");
+     return MPI_SUCCESS;
+ }
+ 
+Index: lib-MIC/libhmpiMIC.a
+===================================================================
+Cannot display: file marked as a binary type.
+svn:mime-type = application/octet-stream
+
+Property changes on: lib-MIC/libhmpiMIC.a
+___________________________________________________________________
+Added: svn:mime-type
+   + application/octet-stream
+
+Index: Makefile
+===================================================================
+--- Makefile	(revision 810)
++++ Makefile	(working copy)
+@@ -29,7 +29,7 @@
+ CC=mpicc -std=gnu99 
+ 
+ WARN=-Wall -Wuninitialized -Winline #-Wno-unused-function
+-CFLAGS+=$(WARN) -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
++CFLAGS+=$(WARN) -xhost -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+ #CFLAGS=$(WARN) -O3 -mcpu=power7 -fomit-frame-pointer
+ #CFLAGS=$(WARN) $(INCLUDE) -O3 -march=native -fomit-frame-pointer
+ #CFLAGS=$(WARN) -O0 -g
+@@ -52,10 +52,10 @@
+ HDRS=hmpi.h barrier.h lock.h profile2.h
+ 
+ 
+-all: INCS+=-DUSE_NUMA=1 -DUSE_MCS=1
++all: INCS+=-DUSE_NUMA=0 -DUSE_MCS=1
+ all: SRCS+=sm_malloc.c
+ all: $(SRCS:%.c=%.o) sm_malloc.o
+-	ar sr libhmpi.a $(SRCS:%.c=%.o)
++	xiar crs libhmpi.a $(SRCS:%.c=%.o)
+ 	rm $(SRCS:%.c=%.o)
+ 
+ #bgq: CFLAGS=-O3 -qhot=novector -qsimd=auto $(INCLUDE) -qinline=auto:level=5 -qassert=refalign -qlibansi -qlibmpi -qipa -qhot  -qprefetch=aggressive
+@@ -88,7 +88,7 @@
+ debug: CFLAGS = $(WARN) -g -O0 -rdynamic $(INCLUDE)
+ debug: SRCS+=sm_malloc.c
+ debug: $(SRCS:%.c=%.o)  sm_malloc.o
+-	ar sr libhmpi.a $(SRCS:%.c=%.o)
++	xiar crs libhmpi.a $(SRCS:%.c=%.o)
+ 	rm $(SRCS:%.c=%.o)
+ 
+ opi: all example_opi.c
+@@ -102,4 +102,3 @@
+ 
+ bgq_clean:
+ 	rm -f *.o libhmpi-bgq.a
+-
+Index: hmpi.c
+===================================================================
+--- hmpi.c	(revision 810)
++++ hmpi.c	(working copy)
+@@ -80,7 +80,6 @@
+ #endif
+ 
+ #ifdef USE_NUMA
+-#include <numa.h>
+ #endif
+ 
+ 
+@@ -406,8 +405,16 @@
+ //MPI communicator.  All other values will be filled in based on the MPI comm.
+ void init_communicator(HMPI_Comm comm)
+ {
++    /*if(comm->comm == MPI_COMM_NULL){
++   	  printf("DEBUG_ HELLO INIT_COMM comm NULL! \n");
++    } else {
++   	  printf("DEBUG_ HELLO INIT_COMM comm good   \n");
++    }*/
++     
+     //Fill in the cached comm variables.
++    //printf("DEBUG_HMPIComm_ init_communcitor(c) [inside]  \n");
+     MPI_Comm_rank(comm->comm, &comm->comm_rank);
++    //printf("DEBUG_HMPIComm_ init_communcitor(c) [after] rank:%d \n",comm->comm_rank);
+     //MPI_Comm_size(comm, &comm->comm_size);
+ 
+ 
+@@ -446,7 +453,14 @@
+                 &comm->node_comm);
+     }
+ 
++    /*printf("DEBUG_HMPIComm_ node_rank init()  rank:%d \n",comm->comm_rank);
++    if(comm->node_comm == MPI_COMM_NULL){
++   	  printf("DEBUG_ INIT_NODE_COMM Node_comm NULL!  rank:%d \n",comm->comm_rank);
++    }else {
++   	  printf("DEBUG_ INIT_NODE_COMM Node_comm is good...  rank:%d \n",comm->comm_rank);
++    }*/
+     MPI_Comm_rank(comm->node_comm, &comm->node_rank);
++    //printf("DEBUG_HMPIComm_  node_rank init()  [after] rank:%d \n",comm->comm_rank);
+     MPI_Comm_size(comm->node_comm, &comm->node_size);
+ 
+     //Translate rank 0 in the node comm into its rank in the main comm.
+@@ -762,15 +776,45 @@
+ int HMPI_Comm_create(HMPI_Comm comm, MPI_Group group, HMPI_Comm* newcomm)
+ {
+     //Allocate a new HMPI communicator.
+-    HMPI_Comm c = MALLOC(HMPI_Comm_info, 1);
++    HMPI_Comm c = (HMPI_Comm_info*)MALLOC(HMPI_Comm_info, 1);
++    //printf("DEBUG_HMPIComm_create \n");
+ 
+     //Create an MPI comm from the group.
+     MPI_Comm_create(comm->comm, group, &c->comm);
++     
++    //dummy test
++    /**MPI_Comm_rank(comm->comm, &comm->comm_rank);
++    if(comm->comm == MPI_COMM_NULL){
++          printf("DEBUG_ HMPI_COMM_CREATE comm NULL! rank:%d \n",comm->comm_rank);
++    } else {
++          printf("DEBUG_  HMPI_COMM_CREATE comm good rank:%d  \n",comm->comm_rank);
++    }*/
+ 
++    if(c->comm == MPI_COMM_NULL){
++          //printf("DEBUG_ NEW_HMPI_COMM_CREATE comm NULL! return from HMPI_Comm_create() \n");
++          //printf("DEBUG_ NEW_HMPI_COMM_CREATE comm NULL! MY_rank:");
++          //MPI_Comm_rank(c->comm, &c->comm_rank);
++          //printf(" :%d \n",c->comm_rank);
++          *newcomm = HMPI_COMM_NULL ;
++          return MPI_ERR_COMM;
++    } /*else {
++          printf("DEBUG_  NEW_HMPI_COMM_CREATE comm good   \n");
++          printf("DEBUG_ NEW_HMPI_COMM_CREATE comm good MY_rank:");
++          MPI_Comm_rank(c->comm, &c->comm_rank);
++          printf(" :%d \n",c->comm_rank);
++    }*/
++
++
+     //Initialize the rest of the HMPI comm.
++    //printf("DEBUG_HMPIComm_create init_communicator() [after] \n");
+     init_communicator(c);
+ 
++    //HMPI_Comm cm = (HMPI_Comm_info*)MALLOC(HMPI_Comm_info, 0);
++    //cm->comm = MPI_COMM_WORLD;
++    //init_communicator(cm);
++    
+     *newcomm = c;
++    //*newcomm = cm;
+     return MPI_SUCCESS;
+ }
+ 
+@@ -794,17 +838,48 @@
+ int HMPI_Comm_free(HMPI_Comm* comm)
+ {
+     HMPI_Comm c = *comm;
+-
++    //printf("HMPI comm_free() \n");
+     //Free malloc'd resources on the comm.
++    /*if(&c->net_comm != MPI_COMM_NULL){
++         printf("HMPI comm net_comm NOT NULL  \n");
++         //MPI_Comm_free(&c->net_comm);
++    }
+ 
++    
++    if(&c->node_comm != MPI_COMM_NULL){
++         printf("HMPI comm node_comm NOT NULL  \n");
++         //MPI_Comm_free(&c->node_comm);
++    }
++
++    if(&c->comm != MPI_COMM_NULL){
++         printf("HMPI comm comm NOT NULL  \n");
++         //MPI_Comm_free(&c->comm);
++    }*/
++    //printf("FREE  [enter]  \n");
+     //Free all the MPI communicators (main, node, net, numa).
+-    MPI_Comm_free(&c->net_comm);
+-    MPI_Comm_free(&c->node_comm);
+-    MPI_Comm_free(&c->comm);
++    if(c->comm != MPI_COMM_NULL){
++        //printf("FREE HMPI comm  NOT NULL [before]  \n");
++    	MPI_Comm_free(&c->comm);
++        //printf("FREE HMPI comm  NOT NULL [after]  \n");
++    }
++    if(c->net_comm != MPI_COMM_NULL){
++        //printf("FREE HMPI net _comm NOT NULL [before]  \n");
++        MPI_Comm_free(&c->net_comm);
++        //printf("FREE HMPI net _comm NOT NULL [after]  \n");
++    }
++    if(c->node_comm != MPI_COMM_NULL){
++        //printf("FREE HMPI comm node_comm NOT NULL [before]  \n");
++    	MPI_Comm_free(&c->node_comm);
++        //printf("FREE HMPI comm node_comm NOT NULL [after]  \n");
++    }
++    //MPI_Comm_free(&c->net_comm);
++    //MPI_Comm_free(&c->node_comm);
++    //MPI_Comm_free(&c->comm);
+ 
+     //Free the comm structure itself.
+     free(c);
+     *comm = HMPI_COMM_NULL;
++    //printf("FREE  [exit]  \n");
+ 
+     return MPI_SUCCESS;
+ }
+Index: lock.h
+===================================================================
+--- lock.h	(revision 810)
++++ lock.h	(working copy)
+@@ -334,7 +334,10 @@
+ #endif
+ 
+ 
+-#ifdef __x86_64__ //Better x86 versions
++#ifdef __MIC__ && __x86_64__ //Better x86 versions
++#define STORE_FENCE() __asm__ volatile ("":::"memory")
++#define LOAD_FENCE() __asm__ volatile ("":::"memory")
++#elif defined(__x86_64__) //Better x86 versions
+ #define STORE_FENCE() __asm__ volatile ("sfence")
+ #define LOAD_FENCE() __asm__ volatile ("lfence")
+ #else //Default GCC builtins
